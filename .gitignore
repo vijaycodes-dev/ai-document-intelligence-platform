@@ -1,7 +1,30 @@
+# .venv/
+# __pycache__/
+# *.pyc
+# .env
+# .vscode/
+# uploads/
+# logs/
+
+# Virtual Environment
 .venv/
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Environment Variables
 .env
-.vscode/
-uploads/
+
+# Logs
 logs/
+
+# Uploaded Files
+uploads/
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
