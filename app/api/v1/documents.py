@@ -13,6 +13,7 @@ from app.schemas.processing import ProcessingResponse
 from app.services.document_metadata_service import DocumentMetadataService
 from app.repositories.document_repository import DocumentRepository
 from fastapi import HTTPException, status
+from app.schemas.document_search import DocumentSearchResult
 
 router = APIRouter(
     prefix="/documents",
@@ -38,7 +39,6 @@ def upload_document(
     
 from typing import List
 
-
 @router.get(
     "",
     response_model=List[DocumentResponse],
@@ -51,6 +51,36 @@ def list_documents(
         db=db,
         user_id=current_user.id,
     )
+
+@router.get(
+    "/search",
+    response_model=list[DocumentSearchResult],
+)
+def search_documents(
+    key: str,
+    value: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    results = DocumentMetadataService.search_metadata(
+        db=db,
+        key=key,
+        value=value,
+        user_id=current_user.id,
+    )
+
+    return [
+        DocumentSearchResult(
+            document_id=metadata.document_id,
+            original_filename=document.original_filename,
+            file_type=document.file_type,
+            status=document.status,
+            key=metadata.key,
+            value=metadata.value,
+            created_at=document.created_at,
+        )
+        for metadata, document in results
+    ]
     
 @router.get(
     "/{document_id}",
