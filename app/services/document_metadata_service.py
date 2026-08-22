@@ -47,3 +47,18 @@ class DocumentMetadataService:
             db=db,
             document_id=document_id,
         )
+        
+    
+    @staticmethod
+    def search_metadata(
+        db: Session,
+        key: str,
+        value: str,
+        user_id: int,
+    ):
+        return DocumentMetadataRepository.search(
+            db=db,
+            key=key,
+            value=value,
+            user_id=user_id,
+        )

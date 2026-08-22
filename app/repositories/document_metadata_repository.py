@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.models.document_metadata import DocumentMetadata
 
+from app.models.document import Document
+
 
 class DocumentMetadataRepository:
 
@@ -46,3 +48,27 @@ class DocumentMetadataRepository:
         )
 
         db.flush()
+        
+    @staticmethod
+    def search(
+        db: Session,
+        key: str,
+        value: str,
+        user_id: int,
+    ):
+        return (
+            db.query(
+                DocumentMetadata,
+                Document,
+            )
+            .join(
+                Document,
+                Document.id == DocumentMetadata.document_id,
+            )
+            .filter(
+                Document.uploaded_by == user_id,
+                DocumentMetadata.key == key,
+                DocumentMetadata.value.ilike(f"%{value}%"),
+            )
+            .all()
+        )
