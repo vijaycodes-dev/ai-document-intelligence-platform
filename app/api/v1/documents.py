@@ -14,6 +14,15 @@ from app.services.document_metadata_service import DocumentMetadataService
 from app.repositories.document_repository import DocumentRepository
 from fastapi import HTTPException, status
 from app.schemas.document_search import DocumentSearchResult
+from app.schemas.summary import SummaryResponse
+
+from app.schemas.semantic_search import (
+    SemanticSearchRequest,
+    SemanticSearchResponse,
+)
+from app.services.semantic_search_service import (
+    SemanticSearchService,
+)
 
 router = APIRouter(
     prefix="/documents",
@@ -209,5 +218,50 @@ def get_document_metadata(
                 "value": item.value,
             }
             for item in metadata
+        ],
+    }
+    
+@router.get(
+    "/{document_id}/summary",
+    response_model=SummaryResponse,
+)
+def summarize_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return DocumentService.summarize_document(
+        db=db,
+        document_id=document_id,
+        user_id=current_user.id,
+    )
+    
+    
+@router.post(
+    "/semantic-search",
+    response_model=SemanticSearchResponse,
+)
+def semantic_search(
+    request: SemanticSearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    results = SemanticSearchService.search(
+        db=db,
+        query=request.query,
+        document_id=request.document_id,
+        limit=request.limit,
+    )
+
+    return {
+        "query": request.query,
+        "results": [
+            {
+                "document_id": chunk.document_id,
+                "chunk_index": chunk.chunk_index,
+                "similarity": 1 - distance,
+                "text": chunk.chunk_text,
+            }
+            for chunk, distance in results
         ],
     }

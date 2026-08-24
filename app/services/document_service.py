@@ -17,6 +17,9 @@ from app.ai.classifier import DocumentClassifier
 from app.ai.ocr import OCRService   
 from app.ai.extractor_manager import ExtractorManager   
 from app.services.document_metadata_service import DocumentMetadataService
+from app.ai.summarizer import DocumentSummarizer
+from app.services.document_chunk_service import DocumentChunkService
+
 class DocumentService:
 
     @staticmethod
@@ -243,6 +246,12 @@ class DocumentService:
             document_id=document.id,
             metadata=metadata,
         )
+        
+        DocumentChunkService.create_chunks(
+            db=db,
+            document_id=document.id,
+            text=text,
+        )
 
         db.commit()
 
@@ -251,3 +260,33 @@ class DocumentService:
             "document_type": document_type,
             "metadata": metadata,
         }
+        
+    @staticmethod
+    def summarize_document(
+        db: Session,
+        document_id: int,
+        user_id: int,
+    ):
+        document = DocumentRepository.get_by_id_and_user(
+            db=db,
+            document_id=document_id,
+            user_id=user_id,
+        )
+
+        if document is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found.",
+            )
+
+        text = OCRService.extract_text(
+            document.storage_path
+        )
+
+        summary = DocumentSummarizer.summarize(text)
+
+        return {
+            "document_id": document.id,
+            "summary": summary,
+        }
+    
