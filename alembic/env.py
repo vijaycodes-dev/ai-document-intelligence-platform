@@ -5,10 +5,12 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.database.base import Base
-from app.models.user import User
 from app.core.config import settings
 from app.database.base import Base
+from app.models.user import User
 from app.models.document import Document
+from app.models.document_metadata import DocumentMetadata
+from app.models.document_chunk import DocumentChunk
 
 
 # this is the Alembic Config object, which provides
