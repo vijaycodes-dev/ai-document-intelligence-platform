@@ -1,1 +1,250 @@
 Generic single-database configuration.
+
+
+
+                    ┌──────────────────┐
+                    │     FastAPI      │
+                    │      API         │
+                    └────────┬─────────┘
+                             │
+             ┌───────────────┼────────────────┐
+             ↓               ↓                ↓
+         Upload           Process          Search
+             │               │                │
+             ↓               ↓                ↓
+        Document DB       OCR             Embedding
+                             │                │
+                             ↓                ↓
+                       Classification     pgvector
+                             │                │
+                             ↓                ↓
+                         Metadata       Semantic Search
+                             │
+                             ↓
+                         Chunks
+                             │
+                             ↓
+                          LLM
+                             │
+                             ↓
+                      Ollama / Gemma
+                             │
+                             ↓
+                         Summary
+
+
+
+
+
+
+
+
+
+Document #2
+    ↓
+OCR
+    ↓
+Classification
+    ↓
+Metadata extraction
+    ↓
+Save metadata
+    ↓
+Chunk text
+    ↓
+Generate 384-dim embeddings
+    ↓
+Save document_chunks
+    ↓
+pgvector
+
+
+
+
+                    ┌──────────────────┐
+                    │     FastAPI      │
+                    │      API         │
+                    └────────┬─────────┘
+                             │
+             ┌───────────────┼────────────────┐
+             ↓               ↓                ↓
+          Upload           Process          Search
+             │               │                │
+             ↓               ↓                ↓
+        Document DB          OCR          Embedding
+                             │                │
+                             ↓                ↓
+                       Classification      pgvector
+                             │                │
+                             ↓                ↓
+                    Metadata Extraction   Semantic Search
+                             │                │
+                             ↓                ↓
+                          Chunks          Relevant Chunks
+                             │                │
+                             ↓                ↓
+                         Embeddings            LLM
+                             │                │
+                             ↓                ↓
+                         pgvector          Ollama
+                                              │
+                                              ↓
+                                         Q&A Answer
+
+
+             ┌───────────────────────────────┐
+             │       Document Summary        │
+             └───────────────┬───────────────┘
+                             │
+                       OCR + Metadata
+                             │
+                             ↓
+                            LLM
+                             │
+                             ↓
+                      Ollama / Gemma
+                             │
+                             ↓
+                          Summary
+
+
+
+
+
+POST /documents/{id}/process
+          │
+          ▼
+    Find document
+          │
+          ├── Not found ──────────► 404
+          │
+          ▼
+         OCR
+          │
+          ├── No text ────────────► 422
+          └── Failure ────────────► 503
+          │
+          ▼
+    Classification
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+   Metadata Extraction
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+      Save Metadata
+          │
+          └── DB failure ─────────► 500
+          │
+          ▼
+  Chunking + Embeddings
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+       Response
+
+What we should do now
+
+We should implement/verify the error handling in this exact process flow before moving to anything else.
+
+The important distinction is:
+
+/process
+    ↓
+OCR → Classification → Metadata → Save → Chunks/Embeddings
+
+while:
+
+/summarize
+    ↓
+OCR + Stored Metadata → LLM → Summary
+
+and:
+
+/search
+    ↓
+Embedding → pgvector → Relevant Chunks
+
+So yes, /process absolutely needs to be handled.
+
+
+
+
+Final processing architecture
+POST /documents/{id}/process
+          │
+          ▼
+    Find document
+          │
+          ├── Not found ──────────► 404
+          │
+          ▼
+         OCR
+          │
+          ├── No text ────────────► 422
+          └── Failure ────────────► 503
+          │
+          ▼
+    Classification
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+   Metadata Extraction
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+      Save Metadata
+          │
+          └── DB failure ─────────► 500
+          │
+          ▼
+  Chunking + Embeddings
+          │
+          └── Failure ────────────► 503
+          │
+          ▼
+       Response
+Summary
+POST /documents/{id}/summarize
+          │
+          ▼
+    Find document
+          │
+          ▼
+         OCR
+          │
+          ▼
+   Stored Metadata
+          │
+          └──────┐
+                 ▼
+                LLM
+                 │
+                 ▼
+              Summary
+Semantic search / Q&A
+POST /search
+     │
+     ▼
+User Question
+     │
+     ▼
+Embedding
+     │
+     ▼
+pgvector
+     │
+     ▼
+Relevant Chunks
+     │
+     ▼
+LLM
+     │
+     ▼
+Answer

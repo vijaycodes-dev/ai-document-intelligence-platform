@@ -17,7 +17,7 @@ from app.ai.classifier import DocumentClassifier
 from app.ai.ocr import OCRService   
 from app.ai.extractor_manager import ExtractorManager   
 from app.services.document_metadata_service import DocumentMetadataService
-from app.ai.summarizer import DocumentSummarizer
+from app.services.summarization import summarize_text
 from app.services.document_chunk_service import DocumentChunkService
 
 class DocumentService:
@@ -174,13 +174,26 @@ class DocumentService:
 
         if document is None:
             raise HTTPException(
-                status_code=404,
-                detail="Document not found."
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found.",
             )
 
-        text = OCRService.extract_text(
-            document.storage_path
-        )
+        try:
+            text = OCRService.extract_text(
+                document.storage_path
+            )
+
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="No text could be extracted from the document.",
+            )
+
+        except RuntimeError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document text extraction service is temporarily unavailable.",
+            )
 
         return {
             "document_id": document.id,
@@ -205,9 +218,31 @@ class DocumentService:
                 detail="Document not found.",
             )
 
-        text = OCRService.extract_text(document.storage_path)
+        try:
+            text = OCRService.extract_text(
+                document.storage_path
+            )
 
-        document_type = DocumentClassifier.classify(text)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="No text could be extracted from the document.",
+            )
+
+        except RuntimeError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document text extraction service is temporarily unavailable.",
+            )
+
+        try:
+            document_type = DocumentClassifier.classify(text)
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document classification service is temporarily unavailable.",
+            )
 
         return {
             "document_id": document.id,
@@ -221,6 +256,7 @@ class DocumentService:
         document_id: int,
         user_id: int,
     ):
+        # 1. Find document
         document = DocumentRepository.get_by_id_and_user(
             db=db,
             document_id=document_id,
@@ -233,27 +269,76 @@ class DocumentService:
                 detail="Document not found.",
             )
 
-        text = OCRService.extract_text(
-            document.storage_path
-        )
+        # 2. OCR
+        try:
+            text = OCRService.extract_text(
+                document.storage_path
+            )
 
-        document_type = DocumentClassifier.classify(text)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="No text could be extracted from the document.",
+            )
 
-        metadata = ExtractorManager.extract(text)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document text extraction service is temporarily unavailable.",
+            )
 
-        DocumentMetadataService.save_metadata(
-            db=db,
-            document_id=document.id,
-            metadata=metadata,
-        )
-        
-        DocumentChunkService.create_chunks(
-            db=db,
-            document_id=document.id,
-            text=text,
-        )
+        # 3. Classification
+        try:
+            document_type = DocumentClassifier.classify(text)
 
-        db.commit()
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document classification service is temporarily unavailable.",
+            )
+
+        # 4. Metadata extraction
+        try:
+            metadata = ExtractorManager.extract(text)
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document metadata extraction service is temporarily unavailable.",
+            )
+
+        # 5. Save metadata
+        try:
+            DocumentMetadataService.save_metadata(
+                db=db,
+                document_id=document.id,
+                metadata=metadata,
+            )
+            db.commit()
+
+        except Exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to save document metadata.",
+            )
+
+        # 6. Chunking + embeddings
+        try:
+            DocumentChunkService.create_chunks(
+                db=db,
+                document_id=document.id,
+                text=text,
+            )
+
+        except Exception:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document chunking and embedding service is temporarily unavailable.",
+            )
 
         return {
             "document_id": document.id,
@@ -279,14 +364,55 @@ class DocumentService:
                 detail="Document not found.",
             )
 
-        text = OCRService.extract_text(
-            document.storage_path
+        # 1. Extract OCR text
+        try:
+            text = OCRService.extract_text(
+                document.storage_path
+            )
+
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="No text could be extracted from the document.",
+            )
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document text extraction service is temporarily unavailable.",
+            )
+
+        # 2. Get stored metadata
+        metadata_entries = DocumentMetadataService.get_metadata(
+            db=db,
+            document_id=document.id,
         )
 
-        summary = DocumentSummarizer.summarize(text)
+        metadata = {
+            entry.key: entry.value
+            for entry in metadata_entries
+        }
+
+        # 3. Generate summary using OCR + metadata
+        try:
+            summary = summarize_text(
+                text=text,
+                metadata=metadata,
+            )
+
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(e),
+            )
+
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Document summarization service is temporarily unavailable.",
+            )
 
         return {
             "document_id": document.id,
             "summary": summary,
         }
-    
