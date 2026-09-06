@@ -1,0 +1,62 @@
+services:
+
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: document_ai_db
+
+    environment:
+      POSTGRES_DB: document_ai
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d document_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: document_ai_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: document_ai_app
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - .env
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/document_ai
+      OLLAMA_HOST: http://ollama:11434
+
+    volumes:
+      - ./uploads:/app/uploads
+
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+
+volumes:
+  postgres_data:
+  ollama_data:

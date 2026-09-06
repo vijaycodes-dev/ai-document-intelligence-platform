@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.models.document import Document
 from app.models.document_chunk import DocumentChunk
 
 
@@ -9,6 +10,7 @@ class DocumentChunkRepository:
     def similarity_search(
         db: Session,
         query_embedding: list[float],
+        user_id: int,
         document_id: int | None = None,
         limit: int = 5,
     ):
@@ -16,9 +18,18 @@ class DocumentChunkRepository:
             query_embedding
         )
 
-        query = db.query(
-            DocumentChunk,
-            distance.label("distance"),
+        query = (
+            db.query(
+                DocumentChunk,
+                distance.label("distance"),
+            )
+            .join(
+                Document,
+                DocumentChunk.document_id == Document.id,
+            )
+            .filter(
+                Document.uploaded_by == user_id
+            )
         )
 
         if document_id is not None:
@@ -30,5 +41,19 @@ class DocumentChunkRepository:
             query
             .order_by(distance)
             .limit(limit)
+            .all()
+        )
+
+    @staticmethod
+    def get_by_document_id(
+        db: Session,
+        document_id: int,
+    ):
+        return (
+            db.query(DocumentChunk)
+            .filter(
+                DocumentChunk.document_id == document_id
+            )
+            .order_by(DocumentChunk.chunk_index)
             .all()
         )

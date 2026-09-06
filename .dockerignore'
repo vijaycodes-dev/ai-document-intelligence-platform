@@ -1,0 +1,33 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test cache
+.pytest_cache/
+
+# Environment secrets
+.env
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Local uploads
+uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,39 @@
+[project]
+name = "ai-document-intelligence-platform"
+version = "0.1.0"
+description = "AI Document Intelligence Platform"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic==1.18.5",
+    "bcrypt==4.0.1",
+    "cryptography==49.0.0",
+    "email-validator==2.3.0",
+    "fastapi==0.139.0",
+    "ollama>=0.6.2",
+    "passlib==1.7.4",
+    "pgvector>=0.5.0",
+    "psycopg2-binary==2.9.12",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.2",
+    "pymupdf>=1.28.2",
+    "python-dotenv==1.2.2",
+    "python-jose==3.5.0",
+    "python-multipart==0.0.32",
+    "sentence-transformers>=6.0.0",
+    "torch",
+    "sqlalchemy==2.0.51",
+    "uvicorn==0.51.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
