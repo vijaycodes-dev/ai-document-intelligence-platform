@@ -57,3 +57,18 @@ class DocumentChunkRepository:
             .order_by(DocumentChunk.chunk_index)
             .all()
         )
+        
+    @staticmethod
+    def delete_by_document_id(
+        db: Session,
+        document_id: int,
+    ):
+        (
+            db.query(DocumentChunk)
+            .filter(
+                DocumentChunk.document_id == document_id
+            )
+            .delete(synchronize_session=False)
+        )
+
+        db.flush()

@@ -43,6 +43,47 @@ class DocumentRepository:
             .order_by(Document.created_at.desc())
             .all()
         )
+        
+    @staticmethod
+    def get_paginated_by_user(
+        db: Session,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        status: str | None = None,
+        file_type: str | None = None,
+    ):
+        query = (
+            db.query(Document)
+            .filter(Document.uploaded_by == user_id)
+        )
+
+        # Filter by document status
+        if status:
+            query = query.filter(
+                Document.status == status
+            )
+
+        # Filter by file type
+        if file_type:
+            query = query.filter(
+                Document.file_type == file_type
+            )
+
+        query = query.order_by(
+            Document.created_at.desc()
+        )
+
+        total = query.count()
+
+        documents = (
+            query
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+        )
+
+        return documents, total
 
     @staticmethod
     def get_by_id_and_user(

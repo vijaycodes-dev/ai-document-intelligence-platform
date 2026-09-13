@@ -3,9 +3,21 @@ from sqlalchemy.orm import Session
 from app.ai.chunking import TextChunker
 from app.ai.embeddings import EmbeddingService
 from app.models.document_chunk import DocumentChunk
-
+from app.repositories.document_chunk_repository import (
+    DocumentChunkRepository,
+)
 
 class DocumentChunkService:
+    
+    @staticmethod
+    def delete_chunks(
+        db: Session,
+        document_id: int,
+    ):
+        DocumentChunkRepository.delete_by_document_id(
+            db=db,
+            document_id=document_id,
+        )
 
     @staticmethod
     def create_chunks(
@@ -40,3 +52,4 @@ class DocumentChunkService:
         db.commit()
 
         return created_chunks
+    

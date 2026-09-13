@@ -25,6 +25,12 @@ class Document(Base):
         default="uploaded",
         nullable=False,
     )
+    
+    processing_stage = Column(
+        String(50),
+        default="uploaded",
+        nullable=False,
+    )
 
     uploaded_by = Column(
         Integer,
@@ -47,4 +53,11 @@ class Document(Base):
     "DocumentChunk",
     back_populates="document",
     cascade="all, delete-orphan",
-)
+    )
+    
+    processing_logs = relationship(
+        "DocumentProcessingLog",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentProcessingLog.created_at",
+    )

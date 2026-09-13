@@ -5,9 +5,9 @@ services:
     container_name: document_ai_db
 
     environment:
-      POSTGRES_DB: document_ai
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
     ports:
       - "5432:5432"
@@ -44,8 +44,9 @@ services:
       - .env
 
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/document_ai
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       OLLAMA_HOST: http://ollama:11434
+      DEBUG: "False"
 
     volumes:
       - ./uploads:/app/uploads
