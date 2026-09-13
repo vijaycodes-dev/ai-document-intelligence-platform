@@ -5,3 +5,4 @@ class ProcessingResponse(BaseModel):
     document_id: int
     document_type: str
     metadata: dict
+    status: str

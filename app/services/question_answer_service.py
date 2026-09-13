@@ -154,7 +154,7 @@ ANSWER:"""
 
         return {
             "question": question,
-            "answer": answer,
+            "answer": answer,   
             "sources": [
                 {
                     "document_id": chunk.document_id,

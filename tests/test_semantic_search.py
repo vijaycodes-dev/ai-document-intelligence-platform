@@ -11,6 +11,7 @@ def test_semantic_search():
         results = SemanticSearchService.search(
             db=db,
             query="When is the invoice payment due?",
+            user_id=1,
             document_id=2,
             limit=5,
         )
