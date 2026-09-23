@@ -1,11 +1,12 @@
-from sqlalchemy import create_engine
+from sqlalchemy import text
 
-DATABASE_URL = "postgresql://postgres:REDACTED%40@localhost:5432/document_ai"
+from app.database.session import SessionLocal
 
-engine = create_engine(DATABASE_URL)
 
-try:
-    with engine.connect() as connection:
-        print("✅ Database connected successfully!")
-except Exception as e:
-    print("❌ Error:", e)
+def test_database_connection():
+    db = SessionLocal()
+
+    try:
+        db.execute(text("SELECT 1"))
+    finally:
+        db.close()
