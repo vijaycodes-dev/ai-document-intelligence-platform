@@ -1,7 +1,7 @@
-from app.ai.ocr import OCRService
+﻿from app.ai.ocr import OCRService
 
-text = OCRService.extract_text(
-    "uploads/b4c70ed5-ad4f-4410-84e4-d46091063424.pdf"
-)
 
-print(text)
+def test_extract_text(sample_pdf):
+    text = OCRService.extract_text(sample_pdf)
+
+    assert text == "Test PDF document"
