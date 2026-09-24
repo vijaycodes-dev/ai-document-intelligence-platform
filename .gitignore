@@ -28,3 +28,7 @@ uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+
+#Backup
+ai-document-intelligence-platform-backup.git/
